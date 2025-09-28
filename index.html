@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ClipBox - 剪贴板历史</title>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <header class="header">
+        <div class="header-top">
+          <h1>📋 ClipBox</h1>
+          <div class="window-controls">
+            <button id="toggle-top-btn" class="btn-control" title="切换置顶">📌</button>
+            <button id="minimize-btn" class="btn-control" title="最小化">➖</button>
+          </div>
+        </div>
+        <div class="controls">
+          <input type="text" id="search-input" placeholder="搜索剪贴板内容..." />
+          <button id="clear-all-btn" class="btn-danger">清空历史</button>
+        </div>
+      </header>
+      
+      <main class="clipboard-list" id="clipboard-list">
+        <div class="empty-state">
+          <p>暂无剪贴板历史</p>
+          <p class="hint">复制一些内容开始使用</p>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
