@@ -2,9 +2,8 @@ name: Tauri Build
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    tags:
+      - '*'
   workflow_dispatch:
 
 jobs:
@@ -23,6 +22,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        
+      - name: Extract tag name
+        id: extract_tag
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Setup node
         uses: actions/setup-node@v4
@@ -45,12 +48,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          target: ${{ matrix.platform.target }}
-          args: --release
+          tagName: ${{ env.TAG_NAME }}
+          includeDebug: false
+          includeRelease: true
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.platform.target }}-build
+          name: clipbox-${{ env.TAG_NAME }}-${{ matrix.platform.target }}
           path: |
             src-tauri/target/${{ matrix.platform.target }}/release/bundle/**/*
