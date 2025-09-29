@@ -429,13 +429,12 @@ fn toggle_window_visibility(window: Window) -> Result<bool, String> {
         Ok(false) // 返回新的可见性状态
     } else {
         // 如果当前不可见，则显示窗口
-        window.show().map_err(|e| e.to_string())?;
-        println!("显示窗口成功");
-        // 显示成功后设置焦点
-        match window.set_focus() {
-            Ok(_) => println!("设置窗口焦点成功"),
-            Err(e) => println!("设置窗口焦点失败: {}", e)
+        if window.is_minimized().unwrap_or(false) {
+            window.unminimize().unwrap();
+        } else {
+            window.show().unwrap();
         }
+        window.set_focus().unwrap();
         Ok(true) // 返回新的可见性状态
     }
 }
@@ -492,7 +491,11 @@ pub fn run() {
         tauri::RunEvent::Reopen { has_visible_windows, .. } => {
             println!("收到重新打开事件，has_visible_windows: {}", has_visible_windows);
             if let Some(window) = app_handle.get_webview_window("main") {
-                window.show().unwrap();
+                if window.is_minimized().unwrap_or(false) {
+                    window.unminimize().unwrap();
+                } else {
+                    window.show().unwrap();
+                }
                 window.set_focus().unwrap();
             }
         }
