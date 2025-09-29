@@ -13,6 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
+        "label": "main",
         "title": "ClipBox - 剪贴板历史",
         "width": 400,
         "height": 600,
@@ -25,6 +26,10 @@
         "transparent": false
       }
     ],
+    "trayIcon": {
+      "iconPath": "icons/32x32.png",
+      "tooltip": "ClipBox - 剪贴板历史"
+    },
     "security": {
       "csp": null
     }
