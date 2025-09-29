@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Emitter, State, Window};
+use tauri::{AppHandle, Emitter, State, Window, Manager};
 use serde::{Deserialize, Serialize};
 // 不使用clipboard-manager插件，继续使用原有的轮询实现
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_ENGINE};
@@ -410,11 +410,71 @@ fn minimize_to_tray(window: Window) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn show_window(window: Window) -> Result<(), String> {
+    window.show().map_err(|e| e.to_string())?;
+    window.set_focus().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    use tauri::{
+        menu::{Menu, MenuItem},
+        tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
+    };
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(ClipboardState::new())
+        .setup(|app| {
+            let show_i = MenuItem::with_id(app, "show", "显示窗口", true, None::<&str>)?;
+            let hide_i = MenuItem::with_id(app, "hide", "隐藏窗口", true, None::<&str>)?;
+            let quit_i = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_i, &hide_i, &quit_i])?;
+
+            let _tray = TrayIconBuilder::with_id("tray")
+                .menu(&menu)
+                .tooltip("ClipBox - 剪贴板历史")
+                .on_menu_event(move |app, event| match event.id.as_ref() {
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "hide" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.hide();
+                        }
+                    }
+                    "quit" => {
+                        std::process::exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = match window.is_visible() {
+                                Ok(true) => window.hide(),
+                                _ => {
+                                    let _ = window.show();
+                                    window.set_focus()
+                                }
+                            };
+                        }
+                    }
+                })
+                .build(app)?;
+
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             start_clipboard_monitor,
@@ -425,7 +485,8 @@ pub fn run() {
             copy_base64_image_to_clipboard,
             get_image_base64,
             toggle_always_on_top,
-            minimize_to_tray
+            minimize_to_tray,
+            show_window
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
