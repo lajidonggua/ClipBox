@@ -7,6 +7,7 @@ interface ClipboardItem {
   timestamp: number;
   item_type: 'text' | 'image';
   image_path?: string;
+  is_favorited?: boolean;
 }
 
 class ClipBox {
@@ -17,6 +18,8 @@ class ClipBox {
   private clearAllBtn: HTMLButtonElement;
   private toggleTopBtn: HTMLButtonElement;
   private minimizeBtn: HTMLButtonElement;
+  private showFavoritesBtn: HTMLButtonElement;
+  private showFavoritesOnly: boolean = false;
 
   constructor() {
     this.searchInput = document.getElementById('search-input') as HTMLInputElement;
@@ -24,6 +27,7 @@ class ClipBox {
     this.clearAllBtn = document.getElementById('clear-all-btn') as HTMLButtonElement;
     this.toggleTopBtn = document.getElementById('toggle-top-btn') as HTMLButtonElement;
     this.minimizeBtn = document.getElementById('minimize-btn') as HTMLButtonElement;
+    this.showFavoritesBtn = document.getElementById('show-favorites-btn') as HTMLButtonElement;
     
     this.init();
   }
@@ -77,6 +81,11 @@ class ClipBox {
       } catch (error) {
         console.error('最小化失败:', error);
       }
+    });
+
+    // 切换收藏显示
+    this.showFavoritesBtn.addEventListener('click', () => {
+      this.toggleFavoritesView();
     });
 
     // 监听剪贴板变化事件
@@ -151,7 +160,8 @@ class ClipBox {
       content: content.trim(),
       timestamp: Date.now(),
       item_type: isImage ? 'image' : 'text',
-      image_path: isImage ? content : undefined
+      image_path: isImage ? content : undefined,
+      is_favorited: false
     };
 
     // 添加到开头
@@ -233,6 +243,26 @@ class ClipBox {
     }
   }
 
+  private async toggleFavorite(id: string) {
+    const item = this.clipboardHistory.find(item => item.id === id);
+    if (item) {
+      item.is_favorited = !item.is_favorited;
+      await this.saveHistory();
+      this.render();
+    }
+  }
+
+  private toggleFavoritesView() {
+    this.showFavoritesOnly = !this.showFavoritesOnly;
+    if (this.showFavoritesOnly) {
+      this.showFavoritesBtn.textContent = '显示全部';
+      this.showFavoritesBtn.classList.add('active');
+    } else {
+      this.showFavoritesBtn.textContent = '显示收藏';
+      this.showFavoritesBtn.classList.remove('active');
+    }
+    this.render();
+  }
 
   private async deleteItem(id: string) {
     this.clipboardHistory = this.clipboardHistory.filter(item => item.id !== id);
@@ -398,18 +428,25 @@ class ClipBox {
   }
 
   private render() {
-    if (this.clipboardHistory.length === 0) {
+    // Filter items based on favorites view
+    const itemsToShow = this.showFavoritesOnly 
+      ? this.clipboardHistory.filter(item => item.is_favorited) 
+      : this.clipboardHistory;
+
+    if (itemsToShow.length === 0) {
+      const emptyMessage = this.showFavoritesOnly 
+        ? '<p>暂无收藏的剪贴板内容</p><p class="hint">点击星星收藏常用内容</p>'
+        : '<p>暂无剪贴板历史</p><p class="hint">复制一些内容开始使用</p>';
       this.clipboardList.innerHTML = `
         <div class="empty-state">
-          <p>暂无剪贴板历史</p>
-          <p class="hint">复制一些内容开始使用</p>
+          ${emptyMessage}
         </div>
       `;
       return;
     }
 
-    const html = this.clipboardHistory.map(item => `
-      <div class="clipboard-item ${item.item_type === 'image' ? 'image-item' : ''}" data-id="${item.id}">
+    const html = itemsToShow.map(item => `
+      <div class="clipboard-item ${item.item_type === 'image' ? 'image-item' : ''} ${item.is_favorited ? 'favorited' : ''}" data-id="${item.id}">
         <div class="clipboard-content">
         ${item.item_type === 'image' && item.content.startsWith('data:image/') ? 
           `<img src="${item.content}" alt="剪贴板图片" class="clipboard-image" />` : 
@@ -419,6 +456,7 @@ class ClipBox {
         <div class="clipboard-meta">
           <span class="clipboard-time">${this.formatTime(item.timestamp)}</span>
           <div class="clipboard-actions">
+            <button class="btn-small favorite-btn ${item.is_favorited ? 'favorited' : ''}" data-id="${item.id}" title="${item.is_favorited ? '取消收藏' : '收藏'}">${item.is_favorited ? '★' : '☆'}</button>
             <button class="btn-small" onclick="clipBox.copyToClipboard('${item.content.replace(/'/g, "\\'")}', '${item.image_path || ''}')">复制</button>
             <button class="btn-small delete-btn">删除</button>
           </div>
@@ -469,6 +507,17 @@ class ClipBox {
           if (id) {
             this.deleteItem(id);
           }
+        }
+      });
+    });
+
+    // 添加收藏按钮点击事件
+    this.clipboardList.querySelectorAll('.favorite-btn').forEach((btn: Element) => {
+      btn.addEventListener('click', (e: Event) => {
+        e.stopPropagation();
+        const id = (btn as HTMLElement).dataset.id;
+        if (id) {
+          this.toggleFavorite(id);
         }
       });
     });

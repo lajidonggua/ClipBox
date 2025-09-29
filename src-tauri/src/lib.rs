@@ -11,6 +11,7 @@ pub struct ClipboardItem {
     pub timestamp: u64,
     pub item_type: String,
     pub image_path: Option<String>,
+    pub is_favorited: Option<bool>,
 }
 
 pub struct ClipboardState {
@@ -67,6 +68,7 @@ fn start_clipboard_monitor(state: State<ClipboardState>, app: AppHandle) {
                                 .as_secs(),
                             item_type: "text".to_string(),
                             image_path: None,
+                            is_favorited: Some(false),
                         };
                         
                         let mut hist = history.lock().unwrap();

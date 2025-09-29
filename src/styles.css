@@ -132,6 +132,28 @@ body {
   transform: translateY(-1px);
 }
 
+.btn-secondary {
+  padding: 0.5rem 1rem;
+  background: rgba(52, 152, 219, 0.8);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  backdrop-filter: blur(10px);
+}
+
+.btn-secondary:hover {
+  background: rgba(52, 152, 219, 1);
+  transform: translateY(-1px);
+}
+
+.btn-secondary.active {
+  background: rgba(52, 152, 219, 1);
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.4);
+}
+
 .clipboard-list {
   flex: 1;
   overflow-y: auto;
@@ -335,6 +357,39 @@ body {
 
 .btn-small:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.favorite-btn {
+  color: #ffd700 !important;
+  font-size: 1rem !important;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.favorite-btn:hover {
+  transform: scale(1.1);
+  color: #ffed4a !important;
+}
+
+.favorite-btn.favorited {
+  color: #ffd700 !important;
+  text-shadow: 0 0 4px rgba(255, 215, 0, 0.6);
+}
+
+.clipboard-item.favorited {
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.2);
+  position: relative;
+}
+
+.clipboard-item.favorited::before {
+  content: '★';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: #ffd700;
+  font-size: 0.8rem;
+  opacity: 0.7;
 }
 
 .empty-state {
