@@ -17,6 +17,8 @@ class ClipBox {
   private clearAllBtn: HTMLButtonElement;
   private toggleTopBtn: HTMLButtonElement;
   private minimizeBtn: HTMLButtonElement;
+  private helpBtn: HTMLButtonElement;
+  private selectedIndex = 0; // 当前选中的项目索引
 
   constructor() {
     this.searchInput = document.getElementById('search-input') as HTMLInputElement;
@@ -24,6 +26,7 @@ class ClipBox {
     this.clearAllBtn = document.getElementById('clear-all-btn') as HTMLButtonElement;
     this.toggleTopBtn = document.getElementById('toggle-top-btn') as HTMLButtonElement;
     this.minimizeBtn = document.getElementById('minimize-btn') as HTMLButtonElement;
+    this.helpBtn = document.getElementById('help-btn') as HTMLButtonElement;
     
     this.init();
   }
@@ -49,10 +52,17 @@ class ClipBox {
   }
 
   private setupEventListeners() {
+    // 键盘导航
+    document.addEventListener('keydown', (e) => {
+      this.handleKeyboardNavigation(e);
+    });
+
     // 搜索功能
     this.searchInput.addEventListener('input', (e) => {
       const query = (e.target as HTMLInputElement).value.toLowerCase();
       this.filterHistory(query);
+      this.selectedIndex = 0; // 搜索后重置选中项
+      this.updateSelection();
     });
 
     // 清空历史
@@ -77,6 +87,11 @@ class ClipBox {
       } catch (error) {
         console.error('最小化失败:', error);
       }
+    });
+
+    // 帮助按钮
+    this.helpBtn.addEventListener('click', () => {
+      this.showHelp();
     });
 
     // 监听剪贴板变化事件
@@ -477,6 +492,9 @@ class ClipBox {
     this.clipboardList.querySelectorAll('.clipboard-image').forEach((image: Element) => {
       (image as HTMLElement).style.pointerEvents = 'auto';
     });
+    
+    // 更新键盘选中状态
+    this.updateSelection();
   }
   
   // 将指定ID的项移到历史记录的第一位
@@ -495,6 +513,199 @@ class ClipBox {
       this.saveHistory();
       this.render();
     }
+  }
+
+  // 处理键盘导航
+  private handleKeyboardNavigation(e: KeyboardEvent) {
+    const visibleItems = this.getVisibleItems();
+    
+    if (visibleItems.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        this.selectedIndex = Math.min(this.selectedIndex + 1, visibleItems.length - 1);
+        this.updateSelection();
+        break;
+        
+      case 'ArrowUp':
+        e.preventDefault();
+        this.selectedIndex = Math.max(this.selectedIndex - 1, 0);
+        this.updateSelection();
+        break;
+        
+      case 'Enter':
+        e.preventDefault();
+        if (visibleItems[this.selectedIndex]) {
+          this.copySelectedItem();
+        }
+        break;
+        
+      case 'Escape':
+        e.preventDefault();
+        invoke('minimize_to_tray').catch(console.error);
+        break;
+        
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9':
+        // 只在没有焦点在输入框时才处理数字键
+        if (document.activeElement !== this.searchInput && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          const index = parseInt(e.key) - 1;
+          if (index < visibleItems.length) {
+            this.selectedIndex = index;
+            this.updateSelection();
+            this.copySelectedItem();
+          }
+        }
+        break;
+    }
+  }
+
+  // 获取当前可见的项目
+  private getVisibleItems(): HTMLElement[] {
+    return Array.from(this.clipboardList.querySelectorAll('.clipboard-item:not([style*="display: none"])'));
+  }
+
+  // 更新选中状态的视觉反馈
+  private updateSelection() {
+    const visibleItems = this.getVisibleItems();
+    
+    // 移除所有选中状态
+    visibleItems.forEach(item => item.classList.remove('selected'));
+    
+    // 添加当前选中项的状态
+    if (visibleItems[this.selectedIndex]) {
+      visibleItems[this.selectedIndex].classList.add('selected');
+      // 确保选中项在视口内
+      visibleItems[this.selectedIndex].scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'nearest' 
+      });
+    }
+  }
+
+  // 复制当前选中的项目
+  private copySelectedItem() {
+    const visibleItems = this.getVisibleItems();
+    const selectedElement = visibleItems[this.selectedIndex];
+    
+    if (selectedElement) {
+      const id = selectedElement.dataset.id;
+      const clipboardItem = this.clipboardHistory.find(i => i.id === id);
+      
+      if (clipboardItem) {
+        // 根据内容类型调用不同的复制方法
+        if (clipboardItem.item_type === 'image') {
+          if (clipboardItem.image_path && clipboardItem.image_path !== 'undefined') {
+            this.copyImageToClipboard(clipboardItem.image_path);
+          } else if (clipboardItem.content.startsWith('data:image/')) {
+            this.copyBase64ImageToClipboard(clipboardItem.content);
+          } else {
+            this.copyToClipboard(clipboardItem.content, clipboardItem.image_path);
+          }
+        } else {
+          this.copyToClipboard(clipboardItem.content, clipboardItem.image_path);
+        }
+        
+        // 将当前项移到历史记录的第一位
+        this.moveItemToTop(id || '');
+        
+        // 复制后可以选择隐藏窗口
+        invoke('minimize_to_tray').catch(console.error);
+      }
+    }
+  }
+
+  // 显示键盘快捷键帮助
+  private showHelp() {
+    const helpContent = `
+      <h3>键盘快捷键</h3>
+      <div class="help-shortcuts">
+        <div class="shortcut-item">
+          <span class="key">↑↓</span>
+          <span class="description">导航剪贴板历史</span>
+        </div>
+        <div class="shortcut-item">
+          <span class="key">Enter</span>
+          <span class="description">复制选中项目</span>
+        </div>
+        <div class="shortcut-item">
+          <span class="key">1-9</span>
+          <span class="description">快速选择并复制</span>
+        </div>
+        <div class="shortcut-item">
+          <span class="key">Esc</span>
+          <span class="description">隐藏窗口</span>
+        </div>
+        <div class="shortcut-item">
+          <span class="key">Ctrl+Shift+V</span>
+          <span class="description">显示/隐藏窗口*</span>
+        </div>
+      </div>
+      <p class="help-note">* 全局快捷键需要系统权限</p>
+    `;
+    
+    this.showModal('键盘快捷键帮助', helpContent);
+  }
+
+  // 显示模态框
+  private showModal(title: string, content: string) {
+    const modal = document.createElement('div');
+    modal.className = 'help-modal';
+    modal.innerHTML = `
+      <div class="help-modal-content">
+        <div class="help-modal-header">
+          <h2>${title}</h2>
+          <button class="help-modal-close">×</button>
+        </div>
+        <div class="help-modal-body">
+          ${content}
+        </div>
+      </div>
+    `;
+    
+    // 添加样式
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    modal.style.zIndex = '2000';
+    
+    // 关闭按钮事件
+    modal.querySelector('.help-modal-close')?.addEventListener('click', () => {
+      modal.remove();
+    });
+    
+    // 点击背景关闭
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
+    
+    // ESC 关闭
+    const escHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        modal.remove();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+    
+    document.body.appendChild(modal);
   }
 }
 
