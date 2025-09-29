@@ -14,9 +14,9 @@
         <div class="header-top">
           <h1>📋 ClipBox</h1>
           <div class="window-controls">
-            <button id="toggle-top-btn" class="btn-control" title="切换置顶">📌</button>
-            <button id="minimize-btn" class="btn-control" title="最小化">➖</button>
-          </div>
+          <button id="toggle-top-btn" class="btn-control" title="切换置顶">📌</button>
+          <button id="shortcut-btn" class="btn-control" title="设置快捷键">⌨️</button>
+        </div>
         </div>
         <div class="controls">
           <input type="text" id="search-input" placeholder="搜索剪贴板内容..." />
@@ -30,6 +30,24 @@
           <p class="hint">复制一些内容开始使用</p>
         </div>
       </main>
+      
+      <!-- 快捷键设置模态框 -->
+      <div id="shortcut-modal" class="shortcut-modal">
+        <div class="shortcut-content">
+          <div class="modal-header">
+            <h3>设置快捷键</h3>
+            <button id="close-shortcut-modal" class="close-btn">×</button>
+          </div>
+          <div class="modal-body">
+            <p>按想要的组合键设置显示/隐藏ClipBox的快捷键：</p>
+            <div class="shortcut-display" id="shortcut-display">Command+Control+V</div>
+            <input type="hidden" id="shortcut-key" value="Cmd+Control+v" />
+            <p class="shortcut-hint">点击下方按钮设置新的快捷键</p>
+            <button id="set-shortcut-btn" class="btn-primary">设置快捷键</button>
+            <button id="reset-shortcut-btn" class="btn-secondary">重置为默认</button>
+          </div>
+        </div>
+      </div>
     </div>
   </body>
 </html>

@@ -199,6 +199,89 @@ body {
   font-size: 0.8rem;
 }
 
+/* 模态框基础样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.modal-header {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2d3436;
+  font-size: 1.2rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #636e72;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #2d3436;
+}
+
+.btn-secondary {
+  padding: 0.5rem 1rem;
+  background: #b2bec3;
+  color: #2d3436;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  margin-left: 0.5rem;
+}
+
+.btn-secondary:hover {
+  background: #636e72;
+  color: white;
+  transform: translateY(-1px);
+}
+
 /* 图片预览模态框 */
 .image-preview-modal {
   position: fixed;
@@ -437,4 +520,108 @@ body {
   border-radius: 8px;
   margin: 0.5rem 0;
   display: block;
+}
+
+/* 快捷键设置模态框样式 */
+.shortcut-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.shortcut-content {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.shortcut-display {
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-align: center;
+  padding: 1rem;
+  margin: 1rem 0;
+  background: rgba(116, 185, 255, 0.2);
+  border: 2px dashed #74b9ff;
+  border-radius: 8px;
+  color: #2d3436;
+  transition: all 0.3s ease;
+}
+
+.shortcut-display.listening {
+  background: rgba(0, 184, 148, 0.2);
+  border-color: #00b894;
+  animation: pulse 1.5s infinite;
+}
+
+.shortcut-hint {
+  font-size: 0.9rem;
+  color: #636e72;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 响应式调整 */
+@media (max-width: 600px) {
+  .shortcut-content {
+    width: 95%;
+  }
+}
+
+/* 暗色模式适配 */
+@media (prefers-color-scheme: light) {
+  .shortcut-content {
+    background: rgba(255, 255, 255, 0.95);
+  }
+  
+  .shortcut-display {
+    color: #2d3436;
+    background: rgba(116, 185, 255, 0.2);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .shortcut-content {
+    background: rgba(45, 52, 54, 0.95);
+  }
+  
+  .modal-header h3 {
+    color: white;
+  }
+  
+  .modal-body p {
+    color: rgba(255, 255, 255, 0.9);
+  }
+  
+  .shortcut-display {
+    color: white;
+    background: rgba(116, 185, 255, 0.1);
+  }
+  
+  .shortcut-hint {
+    color: rgba(255, 255, 255, 0.7);
+  }
 }

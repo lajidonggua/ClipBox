@@ -1,10 +1,13 @@
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Emitter, State, Window};
-use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter, State, Window, Manager, Listener, Wry};
 // 不使用clipboard-manager插件，继续使用原有的轮询实现
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_ENGINE};
+
+// 需要添加 serde 库的导入以使用 Serialize 和 Deserialize 宏
+use serde::{Serialize, Deserialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
+
 pub struct ClipboardItem {
     pub id: String,
     pub content: String,
@@ -41,7 +44,7 @@ fn start_clipboard_monitor(state: State<ClipboardState>, app: AppHandle) {
     // 这里简化实现，使用原来的get_clipboard_content函数进行轮询
     std::thread::spawn(move || {
         loop {
-            std::thread::sleep(std::time::Duration::from_millis(500));
+            std::thread::sleep(std::time::Duration::from_millis(1000));
             
             match get_clipboard_content() {
                 Ok(content) => {
@@ -410,10 +413,38 @@ fn minimize_to_tray(window: Window) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn toggle_window_visibility(window: Window) -> Result<bool, String> {
+    println!("收到toggle_window_visibility命令");
+    
+    // 先检查当前窗口可见性状态
+    let is_visible = window.is_visible().map_err(|e| e.to_string())?;
+    println!("当前窗口可见性: {}", is_visible);
+    
+    // 根据当前状态切换窗口可见性
+    if is_visible {
+        // 如果当前可见，则隐藏窗口
+        window.hide().map_err(|e| e.to_string())?;
+        println!("隐藏窗口成功");
+        Ok(false) // 返回新的可见性状态
+    } else {
+        // 如果当前不可见，则显示窗口
+        window.show().map_err(|e| e.to_string())?;
+        println!("显示窗口成功");
+        // 显示成功后设置焦点
+        match window.set_focus() {
+            Ok(_) => println!("设置窗口焦点成功"),
+            Err(e) => println!("设置窗口焦点失败: {}", e)
+        }
+        Ok(true) // 返回新的可见性状态
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::default().build())
         .manage(ClipboardState::new())
         .invoke_handler(tauri::generate_handler![
             greet,
@@ -425,15 +456,46 @@ pub fn run() {
             copy_base64_image_to_clipboard,
             get_image_base64,
             toggle_always_on_top,
-            minimize_to_tray
+            minimize_to_tray,
+            toggle_window_visibility
         ])
+        .setup(|app| {
+            // 获取主窗口
+            let handle = app.handle(); // 👈 从 App 拿到 AppHandle
+
+            if let Some(window) = handle.get_webview_window("main") {
+                // 监听事件
+                window.listen("tauri://focus", move |_event| {
+                    println!("Main window focused!");
+                });
+
+                window.listen("tauri://close-requested", move |_event| {
+                    println!("Close requested!");
+                    // 这里可以 window.close().unwrap() 或 window.hide().unwrap()
+                });
+            }
+
+            Ok(())
+        })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                println!("收到关闭请求，尝试隐藏到托盘");
                 // 阻止默认关闭行为，改为隐藏到托盘
+                window.hide().ok(); // 隐藏窗口        
                 api.prevent_close();
-                let _ = window.hide();
             }
         })
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("error while running tauri application ");
+
+    app.run(|app_handle, event| match event {
+        tauri::RunEvent::Reopen { has_visible_windows, .. } => {
+            println!("收到重新打开事件，has_visible_windows: {}", has_visible_windows);
+            if let Some(window) = app_handle.get_webview_window("main") {
+                window.show().unwrap();
+                window.set_focus().unwrap();
+            }
+        }
+        _ => {}
+    });
 }

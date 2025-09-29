@@ -1,5 +1,7 @@
-import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
+import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
+import { platform } from "@tauri-apps/plugin-os";
 
 interface ClipboardItem {
   id: string;
@@ -16,14 +18,31 @@ class ClipBox {
   private clipboardList: HTMLElement;
   private clearAllBtn: HTMLButtonElement;
   private toggleTopBtn: HTMLButtonElement;
-  private minimizeBtn: HTMLButtonElement;
+  private shortcutBtn: HTMLButtonElement;
+  private shortcutModal: HTMLElement;
+  private shortcutDisplay: HTMLElement;
+  private shortcutKeyInput: HTMLInputElement;
+  private setShortcutBtn: HTMLButtonElement;
+  private resetShortcutBtn: HTMLButtonElement;
+  private closeShortcutModal: HTMLButtonElement;
+  private shortcutKey: string;
+  private isListeningForShortcut: boolean = false;
 
   constructor() {
     this.searchInput = document.getElementById('search-input') as HTMLInputElement;
     this.clipboardList = document.getElementById('clipboard-list') as HTMLElement;
     this.clearAllBtn = document.getElementById('clear-all-btn') as HTMLButtonElement;
     this.toggleTopBtn = document.getElementById('toggle-top-btn') as HTMLButtonElement;
-    this.minimizeBtn = document.getElementById('minimize-btn') as HTMLButtonElement;
+    this.shortcutBtn = document.getElementById('shortcut-btn') as HTMLButtonElement;
+    this.shortcutModal = document.getElementById('shortcut-modal') as HTMLElement;
+    this.shortcutDisplay = document.getElementById('shortcut-display') as HTMLElement;
+    this.shortcutKeyInput = document.getElementById('shortcut-key') as HTMLInputElement;
+    this.setShortcutBtn = document.getElementById('set-shortcut-btn') as HTMLButtonElement;
+    this.resetShortcutBtn = document.getElementById('reset-shortcut-btn') as HTMLButtonElement;
+    this.closeShortcutModal = document.getElementById('close-shortcut-modal') as HTMLButtonElement;
+    
+    // 初始化shortcutKey属性
+    this.shortcutKey = '';
     
     this.init();
   }
@@ -34,6 +53,11 @@ class ClipBox {
     // 加载历史数据
     await this.loadHistory();
     console.log('历史数据加载完成:', this.clipboardHistory.length);
+    
+    // 加载保存的快捷键或设置默认值
+    this.shortcutKey = await this.loadShortcutKey();
+    this.shortcutKeyInput.value = this.shortcutKey;
+    this.shortcutDisplay.textContent = this.formatShortcutDisplay(this.shortcutKey);
     
     // 设置事件监听
     this.setupEventListeners();
@@ -70,14 +94,34 @@ class ClipBox {
       }
     });
 
-    // 最小化
-    this.minimizeBtn.addEventListener('click', async () => {
-      try {
-        await invoke('minimize_to_tray');
-      } catch (error) {
-        console.error('最小化失败:', error);
+
+
+    // 快捷键设置
+    this.shortcutBtn.addEventListener('click', () => {
+      this.showShortcutModal();
+    });
+
+    this.closeShortcutModal.addEventListener('click', () => {
+      this.hideShortcutModal();
+    });
+
+    this.setShortcutBtn.addEventListener('click', () => {
+      this.startListeningForShortcut();
+    });
+
+    this.resetShortcutBtn.addEventListener('click', async () => {
+      await this.resetShortcutToDefault();
+    });
+
+    // 点击模态框外部关闭
+    this.shortcutModal.addEventListener('click', (e) => {
+      if (e.target === this.shortcutModal) {
+        this.hideShortcutModal();
       }
     });
+
+    // 使用全局快捷键代替页面事件监听
+    // 全局快捷键在loadShortcutKey和saveShortcutKey方法中注册
 
     // 监听剪贴板变化事件
     listen('clipboard-changed', (event) => {
@@ -357,6 +401,236 @@ class ClipBox {
       // 添加到文档
       document.body.appendChild(modal);
     });
+  }
+
+  // 获取当前平台的默认快捷键
+  private async getDefaultShortcutKey(): Promise<string> {
+    try {
+      const currentPlatform = await platform();
+      // macOS使用Cmd+Control+v，Windows使用Ctrl+Alt+v
+      return currentPlatform === 'macos' ? 'Cmd+Control+v' : 'Ctrl+Alt+v';
+    } catch {
+      // 如果无法获取平台信息，默认为macOS快捷键
+      return 'Cmd+Control+v';
+    }
+  }
+
+  // 加载保存的快捷键并注册全局快捷键
+  private async loadShortcutKey(): Promise<string> {
+    try {
+      const saved = localStorage.getItem('clipboxShortcut');
+      if (saved) {
+        // 修复Meta键名问题 - 将Meta替换为Cmd
+        const fixedKey = saved.replace('Meta', 'Cmd');
+        await this.registerGlobalShortcut(fixedKey);
+        return fixedKey;
+      }
+      
+      // 如果没有保存的快捷键，获取平台默认快捷键
+      const defaultShortcut = await this.getDefaultShortcutKey();
+      await this.registerGlobalShortcut(defaultShortcut);
+      return defaultShortcut;
+    } catch (error) {
+      console.error('加载快捷键失败:', error);
+      const defaultShortcut = await this.getDefaultShortcutKey();
+      await this.registerGlobalShortcut(defaultShortcut);
+      return defaultShortcut;
+    }
+  }
+
+  // 保存快捷键
+  private async saveShortcutKey(key: string): Promise<void> {
+    try {
+      console.log('开始保存快捷键:', key);
+      console.log('原快捷键:', this.shortcutKey);
+      
+      // 先取消注册旧的快捷键
+      if (this.shortcutKey && this.shortcutKey !== key) {
+        console.log('准备取消注册旧的快捷键:', this.shortcutKey);
+        try {
+          await this.unregisterGlobalShortcut(this.shortcutKey);
+          // 添加一个小延迟，确保取消注册操作完全完成
+          await new Promise(resolve => setTimeout(resolve, 100));
+          console.log('旧的快捷键已成功取消注册:', this.shortcutKey);
+        } catch (unregisterError) {
+          console.error('取消注册旧的快捷键失败:', unregisterError);
+          // 即使取消注册失败，我们仍然继续尝试注册新的快捷键
+        }
+      }
+      
+      // 修复Meta键名问题 - 将Meta替换为Cmd
+      const fixedKey = key.replace('Meta', 'Cmd');
+      
+      localStorage.setItem('clipboxShortcut', fixedKey);
+      
+      // 注册新的快捷键
+      console.log('准备注册新的快捷键:', fixedKey);
+      await this.registerGlobalShortcut(fixedKey);
+      
+      // 更新内部状态
+      this.shortcutKey = fixedKey;
+      console.log('快捷键保存成功:', fixedKey);
+    } catch (error) {
+      console.error('保存快捷键失败:', error);
+    }
+  }
+
+  // 注册全局快捷键
+  private async registerGlobalShortcut(key: string): Promise<void> {
+    try {
+      // 先尝试取消注册，避免重复注册
+      try {
+        await unregister(key);
+      } catch (e) {
+        // 忽略取消注册失败的错误
+      }
+      
+      // 添加防抖标志，确保快捷键不会被重复触发
+      let isShortcutProcessing = false;
+      
+      // 注册新的全局快捷键
+      await register(key, async () => {
+        // 如果当前正在处理快捷键事件，则忽略后续触发
+        if (isShortcutProcessing) {
+          console.log('忽略重复的快捷键触发:', key);
+          return;
+        }
+        
+        try {
+          isShortcutProcessing = true;
+          console.log('全局快捷键触发:', key);
+          await this.toggleAppVisibility();
+          
+          // 添加一个小延迟，确保在短时间内不会重复处理
+          setTimeout(() => {
+            isShortcutProcessing = false;
+          }, 300);
+        } catch (error) {
+          console.error('处理快捷键事件失败:', error);
+          isShortcutProcessing = false;
+        }
+      });
+      console.log('全局快捷键注册成功:', key);
+    } catch (error) {
+      console.error('注册全局快捷键失败:', error);
+    }
+  }
+
+  // 取消注册全局快捷键
+  private async unregisterGlobalShortcut(key: string): Promise<void> {
+    try {
+      await unregister(key);
+      console.log('全局快捷键取消注册成功:', key);
+    } catch (error) {
+      console.error('取消注册全局快捷键失败:', error);
+    }
+  }
+
+  // 格式化快捷键显示文本
+  private formatShortcutDisplay(key: string): string {
+    // 先确保key不为空
+    if (!key) return '';
+    
+    // 将Cmd替换为Command，Control替换为Control，确保显示友好的快捷键名称
+    return key
+      .replace('Cmd', 'Command')
+      .replace('Control', 'Control')
+      .replace('Shift', 'Shift')
+      .replace('Alt', 'Option');
+  }
+
+  // 显示快捷键设置模态框
+  private showShortcutModal(): void {
+    (this.shortcutModal as HTMLElement).style.display = 'flex';
+  }
+
+  // 隐藏快捷键设置模态框
+  private hideShortcutModal(): void {
+    (this.shortcutModal as HTMLElement).style.display = 'none';
+    this.stopListeningForShortcut();
+  }
+
+  // 开始监听新的快捷键设置
+  private startListeningForShortcut(): void {
+    this.isListeningForShortcut = true;
+    this.shortcutDisplay.textContent = '按下任意键组合...';
+    this.shortcutDisplay.classList.add('listening');
+    this.setShortcutBtn.disabled = true;
+    this.setShortcutBtn.textContent = '设置中...';
+    
+    // 添加键盘事件监听
+    document.addEventListener('keydown', this.handleKeyDownForShortcut);
+  }
+
+  // 停止监听新的快捷键设置
+  private stopListeningForShortcut(): void {
+    this.isListeningForShortcut = false;
+    this.shortcutDisplay.textContent = this.formatShortcutDisplay(this.shortcutKey);
+    this.shortcutDisplay.classList.remove('listening');
+    this.setShortcutBtn.disabled = false;
+    this.setShortcutBtn.textContent = '设置快捷键';
+    
+    // 移除键盘事件监听
+    document.removeEventListener('keydown', this.handleKeyDownForShortcut);
+  }
+
+  // 重置快捷键为默认值
+  private async resetShortcutToDefault(): Promise<void> {
+    try {
+      const defaultShortcut = await this.getDefaultShortcutKey();
+      this.shortcutKey = defaultShortcut;
+      this.shortcutKeyInput.value = this.shortcutKey;
+      this.shortcutDisplay.textContent = this.formatShortcutDisplay(this.shortcutKey);
+      await this.saveShortcutKey(this.shortcutKey);
+      console.log('快捷键已重置为默认值');
+    } catch (error) {
+      console.error('重置快捷键失败:', error);
+    }
+  }
+  
+  // 处理键盘事件以设置新的快捷键
+  private handleKeyDownForShortcut = async (e: KeyboardEvent): Promise<void> => {
+    if (!this.isListeningForShortcut) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+
+    // 构建快捷键组合
+    const modifiers: string[] = [];
+    if (e.metaKey) modifiers.push('Cmd');
+    if (e.ctrlKey) modifiers.push('Control');
+    if (e.shiftKey) modifiers.push('Shift');
+    if (e.altKey) modifiers.push('Alt');
+
+    // 确保至少有一个修饰键和一个普通键
+    if (modifiers.length > 0 && e.key !== 'Meta' && e.key !== 'Control' && e.key !== 'Shift' && e.key !== 'Alt') {
+      const newShortcut = [...modifiers, e.key.toLowerCase()].join('+');
+      
+      // 保存新的快捷键
+      await this.saveShortcutKey(newShortcut);
+      this.shortcutKey = newShortcut;
+      this.shortcutKeyInput.value = this.shortcutKey;
+      
+      console.log('新的快捷键已设置:', this.shortcutKey);
+      this.stopListeningForShortcut();
+    }
+  }
+
+
+
+  // 切换应用可见性
+  private async toggleAppVisibility(): Promise<void> {
+    try {
+      console.log('开始切换应用可见性');
+      
+      const result = await invoke('toggle_window_visibility') as boolean;
+      console.log('切换应用可见性成功，新的窗口状态:', result ? '显示' : '隐藏');
+      
+      // 可选：根据需要更新UI状态或提供用户反馈
+      // 例如，可以在状态栏显示临时提示
+    } catch (error) {
+      console.error('切换应用可见性失败:', error);
+    }
   }
 
   private filterHistory(query: string) {
