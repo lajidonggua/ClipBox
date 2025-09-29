@@ -51,7 +51,10 @@ jobs:
           tagName: ${{ env.TAG_NAME }}
           includeDebug: false
           includeRelease: true
+          releaseDraft: false
+          prerelease: false
 
+      # 保留上传构建产物的步骤，方便查看构建结果
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
