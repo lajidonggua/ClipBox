@@ -132,6 +132,23 @@ body {
   transform: translateY(-1px);
 }
 
+.btn-secondary {
+  padding: 0.5rem 1rem;
+  background: rgba(108, 117, 125, 0.8);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  backdrop-filter: blur(10px);
+}
+
+.btn-secondary:hover {
+  background: rgba(108, 117, 125, 1);
+  transform: translateY(-1px);
+}
+
 .clipboard-list {
   flex: 1;
   overflow-y: auto;
@@ -157,6 +174,13 @@ body {
   background: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.clipboard-item.selected {
+  background: rgba(116, 185, 255, 0.2);
+  border-color: rgba(116, 185, 255, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(116, 185, 255, 0.3);
 }
 
 .image-item {
@@ -437,4 +461,139 @@ body {
   border-radius: 8px;
   margin: 0.5rem 0;
   display: block;
+}
+
+/* 帮助模态框样式 */
+.help-modal-content {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+}
+
+.help-modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.help-modal-header h2 {
+  margin: 0;
+  color: #2d3436;
+  font-size: 1.4rem;
+}
+
+.help-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #636e72;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.help-modal-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #2d3436;
+}
+
+.help-modal-body {
+  padding: 1.5rem;
+  color: #2d3436;
+}
+
+.help-shortcuts {
+  margin: 1rem 0;
+}
+
+.shortcut-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  background: rgba(116, 185, 255, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(116, 185, 255, 0.2);
+}
+
+.shortcut-item .key {
+  font-family: 'Monaco', 'Consolas', monospace;
+  background: rgba(116, 185, 255, 0.8);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  min-width: 80px;
+  text-align: center;
+}
+
+.shortcut-item .description {
+  flex: 1;
+  text-align: right;
+  color: #2d3436;
+  font-size: 0.9rem;
+}
+
+.help-note {
+  font-size: 0.8rem;
+  color: rgba(0, 0, 0, 0.6);
+  text-align: center;
+  margin-top: 1rem;
+  font-style: italic;
+}
+
+/* 深色主题下的帮助模态框 */
+@media (prefers-color-scheme: dark) {
+  .help-modal-content {
+    background: rgba(30, 30, 30, 0.95);
+  }
+  
+  .help-modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .help-modal-header h2 {
+    color: rgba(255, 255, 255, 0.9);
+  }
+  
+  .help-modal-close {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .help-modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+  }
+  
+  .help-modal-body {
+    color: rgba(255, 255, 255, 0.9);
+  }
+  
+  .shortcut-item {
+    background: rgba(116, 185, 255, 0.15);
+    border-color: rgba(116, 185, 255, 0.3);
+  }
+  
+  .shortcut-item .description {
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .help-note {
+    color: rgba(255, 255, 255, 0.6);
+  }
 }

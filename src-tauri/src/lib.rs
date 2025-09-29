@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Emitter, State, Window};
+use tauri::{AppHandle, Emitter, State, Window, Manager};
 use serde::{Deserialize, Serialize};
 // 不使用clipboard-manager插件，继续使用原有的轮询实现
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_ENGINE};
@@ -410,6 +410,13 @@ fn minimize_to_tray(window: Window) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn show_window(window: Window) -> Result<(), String> {
+    window.show().map_err(|e| e.to_string())?;
+    window.set_focus().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -425,7 +432,8 @@ pub fn run() {
             copy_base64_image_to_clipboard,
             get_image_base64,
             toggle_always_on_top,
-            minimize_to_tray
+            minimize_to_tray,
+            show_window
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
