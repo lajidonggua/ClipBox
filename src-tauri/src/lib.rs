@@ -14,6 +14,7 @@ pub struct ClipboardItem {
     pub timestamp: u64,
     pub item_type: String,
     pub image_path: Option<String>,
+    pub is_favorite: bool,
 }
 
 pub struct ClipboardState {
@@ -70,6 +71,7 @@ fn start_clipboard_monitor(state: State<ClipboardState>, app: AppHandle) {
                                 .as_secs(),
                             item_type: "text".to_string(),
                             image_path: None,
+                            is_favorite: false,
                         };
                         
                         let mut hist = history.lock().unwrap();
@@ -439,6 +441,25 @@ fn toggle_window_visibility(window: Window) -> Result<bool, String> {
     }
 }
 
+#[tauri::command]
+fn toggle_favorite_item(id: String, state: State<ClipboardState>) -> Result<bool, String> {
+    let mut history = state.history.lock().unwrap();
+    
+    // 查找指定ID的项目
+    if let Some(item) = history.iter_mut().find(|item| item.id == id) {
+        item.is_favorite = !item.is_favorite;
+        Ok(item.is_favorite)
+    } else {
+        Err(format!("未找到ID为 {} 的剪贴板项目", id))
+    }
+}
+
+#[tauri::command]
+fn get_favorite_items(state: State<ClipboardState>) -> Vec<ClipboardItem> {
+    let history = state.history.lock().unwrap();
+    history.iter().filter(|item| item.is_favorite).cloned().collect()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
@@ -456,7 +477,9 @@ pub fn run() {
             get_image_base64,
             toggle_always_on_top,
             minimize_to_tray,
-            toggle_window_visibility
+            toggle_window_visibility,
+            toggle_favorite_item,
+            get_favorite_items
         ])
         .setup(|app| {
             // 获取主窗口

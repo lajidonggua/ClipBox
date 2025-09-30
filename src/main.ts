@@ -9,6 +9,7 @@ interface ClipboardItem {
   timestamp: number;
   item_type: 'text' | 'image';
   image_path?: string;
+  is_favorite: boolean;
 }
 
 class ClipBox {
@@ -27,6 +28,9 @@ class ClipBox {
   private closeShortcutModal: HTMLButtonElement;
   private shortcutKey: string;
   private isListeningForShortcut: boolean = false;
+  private showAllBtn: HTMLButtonElement;
+  private showFavoritesBtn: HTMLButtonElement;
+  private currentFilter: 'all' | 'favorites' = 'all';
 
   constructor() {
     this.searchInput = document.getElementById('search-input') as HTMLInputElement;
@@ -40,6 +44,8 @@ class ClipBox {
     this.setShortcutBtn = document.getElementById('set-shortcut-btn') as HTMLButtonElement;
     this.resetShortcutBtn = document.getElementById('reset-shortcut-btn') as HTMLButtonElement;
     this.closeShortcutModal = document.getElementById('close-shortcut-modal') as HTMLButtonElement;
+    this.showAllBtn = document.getElementById('show-all-btn') as HTMLButtonElement;
+    this.showFavoritesBtn = document.getElementById('show-favorites-btn') as HTMLButtonElement;
     
     // 初始化shortcutKey属性
     this.shortcutKey = '';
@@ -120,6 +126,15 @@ class ClipBox {
       }
     });
 
+    // 收藏筛选按钮
+    this.showAllBtn.addEventListener('click', () => {
+      this.setFilter('all');
+    });
+
+    this.showFavoritesBtn.addEventListener('click', () => {
+      this.setFilter('favorites');
+    });
+
     // 使用全局快捷键代替页面事件监听
     // 全局快捷键在loadShortcutKey和saveShortcutKey方法中注册
 
@@ -195,7 +210,8 @@ class ClipBox {
       content: content.trim(),
       timestamp: Date.now(),
       item_type: isImage ? 'image' : 'text',
-      image_path: isImage ? content : undefined
+      image_path: isImage ? content : undefined,
+      is_favorite: false
     };
 
     // 添加到开头
@@ -672,18 +688,27 @@ class ClipBox {
   }
 
   private render() {
-    if (this.clipboardHistory.length === 0) {
+    const filteredItems = this.getFilteredItems();
+    
+    if (filteredItems.length === 0) {
+      const emptyMessage = this.currentFilter === 'favorites' 
+        ? '暂无收藏的剪贴板内容'
+        : '暂无剪贴板历史';
+      const emptyHint = this.currentFilter === 'favorites'
+        ? '点击爱心图标收藏重要内容'
+        : '复制一些内容开始使用';
+        
       this.clipboardList.innerHTML = `
         <div class="empty-state">
-          <p>暂无剪贴板历史</p>
-          <p class="hint">复制一些内容开始使用</p>
+          <p>${emptyMessage}</p>
+          <p class="hint">${emptyHint}</p>
         </div>
       `;
       return;
     }
 
-    const html = this.clipboardHistory.map(item => `
-      <div class="clipboard-item ${item.item_type === 'image' ? 'image-item' : ''}" data-id="${item.id}">
+    const html = filteredItems.map(item => `
+      <div class="clipboard-item ${item.item_type === 'image' ? 'image-item' : ''} ${item.is_favorite ? 'favorite-item' : ''}" data-id="${item.id}">
         <div class="clipboard-content">
         ${item.item_type === 'image' && item.content.startsWith('data:image/') ? 
           `<img src="${item.content}" alt="剪贴板图片" class="clipboard-image" />` : 
@@ -693,6 +718,9 @@ class ClipBox {
         <div class="clipboard-meta">
           <span class="clipboard-time">${this.formatTime(item.timestamp)}</span>
           <div class="clipboard-actions">
+            <button class="btn-small favorite-btn ${item.is_favorite ? 'favorited' : ''}" data-id="${item.id}">
+              ${item.is_favorite ? '❤️' : '♡'}
+            </button>
             <button class="btn-small" onclick="clipBox.copyToClipboard('${item.content.replace(/'/g, "\\'")}', '${item.image_path || ''}')">复制</button>
             <button class="btn-small delete-btn">删除</button>
           </div>
@@ -733,6 +761,17 @@ class ClipBox {
       });
     });
     
+    // 添加收藏按钮点击事件
+    this.clipboardList.querySelectorAll('.favorite-btn').forEach((btn: Element) => {
+      btn.addEventListener('click', (e: Event) => {
+        e.stopPropagation();
+        const id = (btn as HTMLElement).dataset.id;
+        if (id) {
+          this.toggleFavorite(id);
+        }
+      });
+    });
+
     // 添加删除按钮点击事件
     this.clipboardList.querySelectorAll('.delete-btn').forEach((btn: Element) => {
       btn.addEventListener('click', (e: Event) => {
@@ -768,6 +807,54 @@ class ClipBox {
       // 保存并重新渲染
       this.saveHistory();
       this.render();
+    }
+  }
+
+  // 设置筛选器
+  private setFilter(filter: 'all' | 'favorites') {
+    this.currentFilter = filter;
+    
+    // 更新按钮状态
+    this.showAllBtn.classList.toggle('active', filter === 'all');
+    this.showFavoritesBtn.classList.toggle('active', filter === 'favorites');
+    
+    // 重新渲染列表
+    this.render();
+  }
+
+  // 切换收藏状态
+  private async toggleFavorite(id: string) {
+    console.log('切换收藏状态，ID:', id);
+    try {
+      const newFavoriteState = await invoke('toggle_favorite_item', { id }) as boolean;
+      console.log('新的收藏状态:', newFavoriteState);
+      
+      // 更新本地状态
+      const item = this.clipboardHistory.find(item => item.id === id);
+      if (item) {
+        item.is_favorite = newFavoriteState;
+        console.log('本地状态已更新:', item);
+      }
+      
+      // 保存并重新渲染
+      await this.saveHistory();
+      this.render();
+    } catch (error) {
+      console.error('切换收藏状态失败:', error);
+    }
+  }
+
+  // 获取当前应该显示的项目
+  private getFilteredItems(): ClipboardItem[] {
+    if (this.currentFilter === 'favorites') {
+      // 收藏视图：只显示收藏的项目，按时间倒序
+      return this.clipboardHistory
+        .filter(item => item.is_favorite)
+        .sort((a, b) => b.timestamp - a.timestamp);
+    } else {
+      // 全部视图：显示所有项目，只按时间倒序，不置顶收藏项目
+      return this.clipboardHistory
+        .sort((a, b) => b.timestamp - a.timestamp);
     }
   }
 }

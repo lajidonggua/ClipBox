@@ -14,11 +14,11 @@
     "windows": [
       {
         "title": "ClipBox - 剪贴板历史",
-        "width": 400,
-        "height": 600,
+        "width": 500,
+        "height": 700,
         "resizable": true,
-        "minWidth": 300,
-        "minHeight": 400,
+        "minWidth": 450,
+        "minHeight": 600,
         "alwaysOnTop": false,
         "skipTaskbar": false,
         "decorations": true,

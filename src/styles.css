@@ -409,7 +409,7 @@ body {
   padding: 0.25rem 0.5rem;
   background: rgba(255, 255, 255, 0.1);
   color: white;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.75rem;
@@ -418,6 +418,7 @@ body {
 
 .btn-small:hover {
   background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .empty-state {
@@ -511,6 +512,64 @@ body {
   .hint {
     color: rgba(0, 0, 0, 0.4);
   }
+  
+  .btn-filter {
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: #2d3436 !important;
+    border: 2px solid rgba(45, 52, 54, 0.3) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  .btn-filter:hover {
+    background: rgba(255, 255, 255, 1) !important;
+    border-color: rgba(45, 52, 54, 0.5) !important;
+    transform: translateY(-1px) !important;
+  }
+  
+  .btn-filter.active {
+    background: rgba(116, 185, 255, 1) !important;
+    color: white !important;
+    border-color: #74b9ff !important;
+  }
+  
+  .favorite-item {
+    background: rgba(255, 215, 0, 0.2);
+  }
+  
+  .favorite-item:hover {
+    background: rgba(255, 215, 0, 0.3);
+  }
+  
+  .favorite-btn {
+    color: #2d3436 !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid rgba(0, 0, 0, 0.2) !important;
+    border-radius: 6px !important;
+  }
+  
+  .favorite-btn:hover {
+    background: rgba(255, 255, 255, 1) !important;
+    color: #e74c3c !important;
+    border-color: #e74c3c !important;
+    transform: scale(1.1) !important;
+  }
+  
+  .favorite-btn.favorited {
+    color: #e74c3c !important;
+    background: rgba(231, 76, 60, 0.15) !important;
+    border-color: #e74c3c !important;
+  }
+  
+  .btn-small {
+    background: rgba(255, 255, 255, 0.9);
+    color: #2d3436;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+  }
+  
+  .btn-small:hover {
+    background: rgba(255, 255, 255, 1);
+    border-color: rgba(0, 0, 0, 0.3);
+  }
 }
 
 /* 剪贴板图片样式 */
@@ -584,10 +643,148 @@ body {
   }
 }
 
+/* 收藏相关样式 */
+.filter-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-filter {
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  backdrop-filter: blur(10px);
+}
+
+.btn-filter:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-filter.active {
+  background: rgba(116, 185, 255, 0.8);
+  border-color: #74b9ff;
+  color: white;
+}
+
+.favorite-item {
+  border-left: 3px solid #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.favorite-item:hover {
+  background: rgba(255, 215, 0, 0.15);
+}
+
+.favorite-btn {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0.3rem 0.5rem !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  border-radius: 6px !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.favorite-btn:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ff6b6b !important;
+  border-color: #ff6b6b !important;
+}
+
+.favorite-btn.favorited {
+  animation: heartBeat 0.5s ease-in-out;
+  background: rgba(255, 107, 107, 0.2) !important;
+  color: #ff6b6b !important;
+  border-color: #ff6b6b !important;
+}
+
+@keyframes heartBeat {
+  0% { transform: scale(1); }
+  14% { transform: scale(1.3); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.3); }
+  70% { transform: scale(1); }
+}
+
 /* 响应式调整 */
 @media (max-width: 600px) {
   .shortcut-content {
     width: 95%;
+  }
+  
+  .controls {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .filter-buttons {
+    order: -1;
+    justify-content: center;
+  }
+}
+
+/* 窗口宽度小于500px时的样式调整 */
+@media (max-width: 500px) {
+  .header {
+    padding: 0.75rem;
+  }
+  
+  .header-top {
+    margin-bottom: 0.75rem;
+  }
+  
+  .clipboard-list {
+    padding: 0.75rem;
+  }
+  
+  .clipboard-item {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .btn-filter {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .filter-buttons {
+    gap: 0.4rem;
+  }
+}
+
+/* 确保在最小窗口尺寸下的布局 */
+@media (max-width: 450px) {
+  .header h1 {
+    font-size: 1.3rem;
+  }
+  
+  .clipboard-actions {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  
+  .btn-small {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .favorite-btn {
+    min-width: 28px !important;
+    height: 28px !important;
+    font-size: 1rem;
   }
 }
 
