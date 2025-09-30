@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Emitter, State, Window, Manager, Listener, Wry};
+use tauri::{AppHandle, Emitter, State, Window, Manager, Listener};
 // 不使用clipboard-manager插件，继续使用原有的轮询实现
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_ENGINE};
 
