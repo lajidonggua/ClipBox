@@ -79,6 +79,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ env.TAG_NAME }}
+          releaseName: "Clipbox ${{ env.TAG_NAME }}"   # 👈 必须添加
           includeDebug: false
           includeRelease: true
           releaseDraft: false
