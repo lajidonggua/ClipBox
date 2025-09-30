@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        
+
       - name: Extract tag name
         id: extract_tag
         run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
@@ -38,7 +38,7 @@ jobs:
           targets: ${{ matrix.platform.target }}
 
       - name: Install frontend dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build frontend
         run: npm run build
@@ -49,12 +49,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ env.TAG_NAME }}
+          releaseName: "ClipBox ${{ env.TAG_NAME }}" # ✅ 必须加
+          releaseBody: "自动构建发布版本 ${{ env.TAG_NAME }}"
           includeDebug: false
           includeRelease: true
           releaseDraft: false
           prerelease: false
 
-      # 保留上传构建产物的步骤，方便查看构建结果
+      # 上传构建产物，方便调试下载
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
